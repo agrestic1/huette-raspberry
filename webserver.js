@@ -59,7 +59,7 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
     });
 
     Object.keys(devices).forEach((element) => {
-        socket.emit("attach", { device: { id: element, type: "LED" } });
+        socket.emit("attach", { device: { id: element, name: "LED innen", type: "Light" } });
     });
 
     socket.on('debugCommandAttach', (data) => { // Do this if on client disconnetcs
@@ -67,6 +67,16 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
         io2.emit('connection', { id: Math.random(), on: (event, callback) => {
 
         } });
+    });
+
+    socket.on('debugCommandDetach', (data) => { // Do this if on client disconnetcs
+        console.log('Disconnection of ID', data.id);
+
+        Object.keys(clients).forEach((element) => {
+            clients[element].emit("detach", { device: { id: data.id } });
+        });
+
+        delete devices[data.id]; // delete element
     });
 
 });
@@ -85,7 +95,7 @@ io2.on('connection', function(socket) {
 
     // TODO: gather device type information upon connection event "LED is just a dummy placeholder"
     Object.keys(clients).forEach((element) => {
-        clients[element].emit("attach", { device: { id: socket.id, type: "LED" } });
+        clients[element].emit("attach", { device: { id: socket.id, name: "LED innen", type: "Light" } });
     });
 
     devices[socket.id] = socket; // Store object to make it available for other functions
@@ -94,7 +104,7 @@ io2.on('connection', function(socket) {
         console.log('Disconnection of ID', socket.id);
 
         Object.keys(clients).forEach((element) => {
-            clients[element].emit("detach", { device: { id: socket.id, type: "LED" } });
+            clients[element].emit("detach", { device: { id: socket.id } });
         });
 
         delete devices[socket.id]; // delete element
