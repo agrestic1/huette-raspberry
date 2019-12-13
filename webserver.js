@@ -59,7 +59,7 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
     });
 
     Object.keys(devices).forEach((element) => {
-        socket.emit("attach", { device: { id: element, name: "LED innen", type: "Light" } });
+        socket.emit("attach", { device: { id: element, name: "LED innen", type: "Light", on_state: false } });
     });
 
     socket.on('debugCommandAttach', (data) => { // Do this if on client disconnetcs
@@ -95,7 +95,7 @@ io2.on('connection', function(socket) {
 
     // TODO: gather device type information upon connection event "LED is just a dummy placeholder"
     Object.keys(clients).forEach((element) => {
-        clients[element].emit("attach", { device: { id: socket.id, name: "LED innen", type: "Light" } });
+        clients[element].emit("attach", { device: { id: socket.id, name: "LED innen", type: "Light", on_state: false } });
     });
 
     devices[socket.id] = socket; // Store object to make it available for other functions
