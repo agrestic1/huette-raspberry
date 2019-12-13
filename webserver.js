@@ -46,6 +46,9 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
         // const rawData = i2c1.sendByteSync(MCP9808_ADDR, data);
         // i2c1.closeSync();
     });
+
+    // TODO: Send detach all command
+
     socket.on('Socket2', (data) => { //get content from function "websocket"  from client
         // Websocket
         console.log('Sending to Socket2:', data);
@@ -60,6 +63,12 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
 
     Object.keys(devices).forEach((element) => {
         socket.emit("attach", { device: { id: element, name: "LED innen", type: "Light", on_state: false } });
+    });
+
+    socket.on('set', (data) => { // Do this if on client disconnetcs
+        console.log('Set command received:', data);
+        if(isNaN(parseFloat(data.id)))
+            devices[data.id].emit("set", data);
     });
 
     socket.on('debugCommandAttach', (data) => { // Do this if on client disconnetcs
@@ -87,18 +96,20 @@ var app2 = require('http').createServer()
 var io2 = require('socket.io')(app2);
 app2.listen(8081); // this one listens to 8081
 
-io2.on('connection', function(socket) {
+io2.on('connection', (socket) => {
+    devices[socket.id] = socket; // Store object to make it available for other functions
+    
     console.log('New Device with ID', socket.id);
     socket.on("jsonObject", function(data) {
         console.log(data);
     });
+
 
     // TODO: gather device type information upon connection event "LED is just a dummy placeholder"
     Object.keys(clients).forEach((element) => {
         clients[element].emit("attach", { device: { id: socket.id, name: "LED innen", type: "Light", on_state: false } });
     });
 
-    devices[socket.id] = socket; // Store object to make it available for other functions
     //deviceIDs.push(socket.id); // And store its ID in an array
     socket.on('disconnect', function() { // Do this if a device disconnetcs
         console.log('Disconnection of ID', socket.id);
