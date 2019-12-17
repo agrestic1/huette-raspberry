@@ -4,39 +4,37 @@ var express = require('express');
 var app = express();
 var cors = require('cors')
 var http = require('http').createServer(app);
+var http2 = require('http').createServer(app);
 
 app.get('/', function (req, res) {
     res.sendFile(__dirname + '/public/index.html'); // routes initial call to index.html
 });
 app.use(express.static('public')); // express public folder
-app.use(function (req, res, next) {
-    res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-    res.header('Access-Control-Expose-Headers', 'Content-Length');
-    res.header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, Range');
-    next();
-});
+// app.use(function (req, res, next) {
+//     res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
+//     res.header('Access-Control-Allow-Credentials', 'true');
+//     res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+//     res.header('Access-Control-Expose-Headers', 'Content-Length');
+//     res.header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, Range');
+//     next();
+// });
 
-const corsOptions = {
-    origin: "*",
-    credentials: true
-};
-app.use(cors(corsOptions));
+// const corsOptions = {
+//     origin: "*",
+//     credentials: true
+// };
+// app.use(cors(corsOptions));
 
-http.listen(8020); //listen to port 8080
-
-var clients = {}; // not yet necessary to: Store clients
-//var clitenIDs = [];  // not yet necessary to: Store clients
+var clients = {}; // List of clients
 var devices = {}; // List of devices
-//var deviceIDs = []; // List of ISs of connected devices
-
-// I2C for communication with arduino
-// const i2c = require('i2c-bus');
-// const MCP9808_ADDR = 0x05;
 
 // first socket to communicate with clients
-var io = require('socket.io').listen(http, { log: false, origins: '*:*' }); //require socket.io module and pass the http object
+var io = require('socket.io')(http, { log: false, origins: '*:*', path: "/LosOchos.org/socket.io" }); //require socket.io module and pass the http object
+
+http.listen(8020, '0.0.0.0', function() { //listen to port 8020
+    console.log("Waiting for clients on", "http://" + http.address().address + ":" + http.address().port);
+});
+
 io.sockets.on('connection', (socket) => { // Socket Connection to client
     clients[socket.id] = socket; // not yet necessary to: Store clients
     console.log('New Client with ID', socket.id);
@@ -70,30 +68,55 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
 
     socket.on('debugCommandAttach', (data) => { // Do this if on client disconnetcs
         console.log('Debug: Device attach event discovered:', data);
+        let here_id = Math.random().toString();
         io2.emit('connection', {
-            id: Math.random(), on: (event, callback) => {
+            id: here_id, on: (event, callback) => {
 
+            },
+            emit: (event, ...args) => {
+                setTimeout(() => {
+                    console.log("Device response:", event, data);
+                    Object.keys(clients).forEach((element) => {
+                        clients[element].emit(event, { device: { id: here_id, payload: {name: data.name, type: data.type} } });
+                    });
+                }, 100);
+                
+            },
+            disconnect: () => {
+                console.log('Disconnection of ID', here_id);
+
+                Object.keys(clients).forEach((element) => {
+                    clients[element].emit("detach", { device: { id: here_id } });
+                });
+
+                delete devices[here_id]; // delete element
             }
         });
     });
 
     socket.on('debugCommandDetach', (data) => { // Do this if on client disconnetcs
-        console.log('Disconnection of ID', data.id);
+        devices[data.id].disconnect();
+        // console.log('Disconnection of ID', data.id);
 
-        Object.keys(clients).forEach((element) => {
-            clients[element].emit("detach", { device: { id: data.id } });
-        });
+        // Object.keys(clients).forEach((element) => {
+        //     clients[element].emit("detach", { device: { id: data.id } });
+        // });
 
-        delete devices[data.id]; // delete element
+        // delete devices[data.id]; // delete element
     });
 
 });
 
 // // ------------------------------- DEVICE SOCKET ----------------------------------------
 // // Socket2 to communicate with devices
-var app2 = require('http').createServer()
-var io2 = require('socket.io')(app2);
-app2.listen(8081); // this one listens to 8081
+var io2 = require('socket.io')(http2, { log: false,
+                                        origins: '*:*',
+                                        pingInterval: 2000,
+                                        pingTimeout: 5000 });
+
+http2.listen(8030, '0.0.0.0', function() { //listen to port 8030
+    console.log("Waiting for devices on", "http://" + http2.address().address + ":" + http2.address().port);
+});
 
 io2.on('connection', (socket) => {
     devices[socket.id] = socket; // Store object to make it available for other functions
