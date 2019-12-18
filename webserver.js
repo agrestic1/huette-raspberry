@@ -131,10 +131,16 @@ io2.on('connection', (socket) => {
 
     socket.on("get", function (data) {
         console.log("Device response:", data);
+        Object.keys(clients).forEach((element) => {
+            clients[element].emit("get", { device: { id: socket.id, payload: data } });
+        });
     });
 
     socket.on("set", function (data) {
         console.log("Device response:", data);
+        Object.keys(clients).forEach((element) => {
+            clients[element].emit("set", { device: { id: socket.id, payload: data } });
+        });
     });
 
     socket.on("publish", function (data) {
