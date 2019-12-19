@@ -31,7 +31,7 @@ var devices = {}; // List of devices
 // first socket to communicate with clients
 var io = require('socket.io')(http, { log: false, origins: '*:*', path: "/LosOchos.org/socket.io" }); //require socket.io module and pass the http object
 
-http.listen(8020, '0.0.0.0', function() { //listen to port 8020
+http.listen(8020, '0.0.0.0', function () { //listen to port 8020
     console.log("Waiting for clients on", "http://" + http.address().address + ":" + http.address().port);
 });
 
@@ -51,15 +51,21 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
 
     socket.on('get', (data) => { // Do this if on client disconnetcs
         console.log('Get command received:', data);
-        if (isNaN(parseFloat(data.id)))
+        try {
             devices[data.id].emit("get", data.payload);
+        } catch (error) {
+            console.error("Device not found!");
+        }
     });
 
     socket.on('set', (data) => { // Do this if on client disconnetcs
         console.log('Set command received:', data);
-        if (isNaN(parseFloat(data.id)))
+        try {
             devices[data.id].emit("set", data.payload);
-    });    
+        } catch (error) {
+            console.error("Device not found!");
+        }
+    });
 
     socket.on('disconnect', () => { // Do this if on client disconnetcs
         console.log('Disconnection of Client', socket.id);
@@ -77,10 +83,10 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
                 setTimeout(() => {
                     console.log("Device response:", event, data);
                     Object.keys(clients).forEach((element) => {
-                        clients[element].emit(event, { device: { id: here_id, payload: {name: data.name, type: data.type} } });
+                        clients[element].emit(event, { device: { id: here_id, payload: { name: data.name, type: data.type } } });
                     });
                 }, 100);
-                
+
             },
             disconnect: () => {
                 console.log('Disconnection of ID', here_id);
@@ -95,7 +101,13 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
     });
 
     socket.on('debugCommandDetach', (data) => { // Do this if on client disconnetcs
-        devices[data.id].disconnect();
+        setTimeout(() => {
+            try {
+                devices[data.id].disconnect();
+            } catch (error) {
+                console.error("Device not found!");
+            }
+        }, 100);
         // console.log('Disconnection of ID', data.id);
 
         // Object.keys(clients).forEach((element) => {
@@ -109,12 +121,14 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
 
 // // ------------------------------- DEVICE SOCKET ----------------------------------------
 // // Socket2 to communicate with devices
-var io2 = require('socket.io')(http2, { log: false,
-                                        origins: '*:*',
-                                        pingInterval: 2000,
-                                        pingTimeout: 5000 });
+var io2 = require('socket.io')(http2, {
+    log: false,
+    origins: '*:*',
+    pingInterval: 2000,
+    pingTimeout: 10000
+});
 
-http2.listen(8030, '0.0.0.0', function() { //listen to port 8030
+http2.listen(8030, '0.0.0.0', function () { //listen to port 8030
     console.log("Waiting for devices on", "http://" + http2.address().address + ":" + http2.address().port);
 });
 
@@ -130,21 +144,21 @@ io2.on('connection', (socket) => {
     });
 
     socket.on("get", function (data) {
-        console.log("Device response:", data);
+        console.log("Device GET response:", data);
         Object.keys(clients).forEach((element) => {
             clients[element].emit("get", { device: { id: socket.id, payload: data } });
         });
     });
 
     socket.on("set", function (data) {
-        console.log("Device response:", data);
+        console.log("Device SET response:", data);
         Object.keys(clients).forEach((element) => {
             clients[element].emit("set", { device: { id: socket.id, payload: data } });
         });
     });
 
     socket.on("publish", function (data) {
-        console.log("Device response:", data);
+        console.log("Device PUBLISH response:", data);
         Object.keys(clients).forEach((element) => {
             clients[element].emit("publish", { device: { id: socket.id, payload: data } });
         });
