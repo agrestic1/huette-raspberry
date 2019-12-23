@@ -49,7 +49,7 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
         devices[element].emit("publish", { payload: {} });
     });
 
-    socket.on('get', (data) => { // Do this if on client disconnetcs
+    socket.on('get', (data) => {
         console.log('Get command received:', data);
         try {
             devices[data.id].emit("get", data.payload);
@@ -58,7 +58,7 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
         }
     });
 
-    socket.on('set', (data) => { // Do this if on client disconnetcs
+    socket.on('set', (data) => {
         console.log('Set command received:', data);
         try {
             devices[data.id].emit("set", data.payload);
@@ -67,9 +67,27 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
         }
     });
 
-    socket.on('disconnect', () => { // Do this if on client disconnetcs
+    socket.on('write_eeprom', (data) => {
+        console.log('WRITE EEPROM command received:', data);
+        try {
+            devices[data.id].emit("write_eeprom", data.payload);
+        } catch (error) {
+            console.error("Device not found!");
+        }
+    });
+
+    socket.on('read_eeprom', (data) => {
+        console.log('READ EEPROM command received:', data);
+        try {
+            devices[data.id].emit("read_eeprom", data.payload);
+        } catch (error) {
+            console.error("Device not found!");
+        }
+    });
+
+    socket.on('disconnect', () => { // Do this if a client disconnetcs
         console.log('Disconnection of Client', socket.id);
-        // delete clients[socket.id]; // not yet necessary to: Store clients
+        delete clients[socket.id];
     });
 
     socket.on('debugCommandAttach', (data) => { // Do this if on client disconnetcs
@@ -100,7 +118,7 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
         });
     });
 
-    socket.on('debugCommandDetach', (data) => { // Do this if on client disconnetcs
+    socket.on('debugCommandDetach', (data) => {
         setTimeout(() => {
             try {
                 devices[data.id].disconnect();
@@ -108,13 +126,6 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
                 console.error("Device not found!");
             }
         }, 100);
-        // console.log('Disconnection of ID', data.id);
-
-        // Object.keys(clients).forEach((element) => {
-        //     clients[element].emit("detach", { device: { id: data.id } });
-        // });
-
-        // delete devices[data.id]; // delete element
     });
 
 });
@@ -136,12 +147,6 @@ io2.on('connection', (socket) => {
     devices[socket.id] = socket; // Store object to make it available for other functions
 
     console.log('New Device with ID', socket.id);
-    socket.emit("publish", { payload: {} });
-
-    // TODO: gather device type information upon connection event "LED is just a dummy placeholder"
-    Object.keys(clients).forEach((element) => {
-        clients[element].emit("attach", { device: { id: socket.id } });
-    });
 
     socket.on("get", function (data) {
         console.log("Device GET response:", data);
@@ -165,20 +170,30 @@ io2.on('connection', (socket) => {
     });
 
     socket.on("write_eeprom", function (data) {
-        console.log("Device response:", data);
+        console.log("Device EEPROM_WRITE response:", data);
+        Object.keys(clients).forEach((element) => {
+            clients[element].emit("eeprom_write", { device: { id: socket.id, payload: data } });
+        });
+    });
+
+    socket.on("read_eeprom", function (data) {
+        console.log("Device EEPROM_READ response:", data);
+        Object.keys(clients).forEach((element) => {
+            clients[element].emit("eeprom_read", { device: { id: socket.id, payload: data } });
+        });
     });
 
     socket.on("error", function (data) {
         console.log("Device response:", data);
     });
 
-    socket.on('disconnect', function () { // Do this if a device disconnetcs
+    socket.on('disconnect', function () {
         console.log('Disconnection of ID', socket.id);
 
         Object.keys(clients).forEach((element) => {
             clients[element].emit("detach", { device: { id: socket.id } });
         });
 
-        delete devices[socket.id]; // delete element
+        delete devices[socket.id];
     });
 });
