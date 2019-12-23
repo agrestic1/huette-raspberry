@@ -147,6 +147,11 @@ io2.on('connection', (socket) => {
     devices[socket.id] = socket; // Store object to make it available for other functions
 
     console.log('New Device with ID', socket.id);
+    socket.emit("publish", { payload: {} });
+
+    Object.keys(clients).forEach((element) => {
+        clients[element].emit("attach", { device: { id: socket.id } });
+    });
 
     socket.on("get", function (data) {
         console.log("Device GET response:", data);
