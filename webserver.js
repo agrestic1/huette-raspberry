@@ -1,15 +1,22 @@
 // Set up nodeJS webserver using http
-var fs = require('fs'); //require filesystem to read html files
+// var fs = require('fs'); //require filesystem to read html files
 var express = require('express');
 var app = express();
-var cors = require('cors')
+// var cors = require('cors')
 var http = require('http').createServer(app);
 var http2 = require('http').createServer(app);
 
-app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/public/index.html'); // routes initial call to index.html
-});
-app.use(express.static('public')); // express public folder
+// app.get('/', function (req, res) {
+//     res.sendFile(__dirname + '/public/index.html'); // routes initial call to index.html
+// });
+// app.use(express.static('public')); // express public folder
+
+
+// app.get('/', function (req, res) {
+//     res.sendFile(__dirname + '/../LosOchos.org/www/index.html'); // routes initial call to index.html
+// });
+// app.use(express.static('assets')); // express public folder
+
 // app.use(function (req, res, next) {
 //     res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
 //     res.header('Access-Control-Allow-Credentials', 'true');
