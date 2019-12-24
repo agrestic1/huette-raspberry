@@ -6,7 +6,7 @@ clone repository
 
 cd huette-raspberry
 
-node install
+npm install
 
 node webserver.js
 
