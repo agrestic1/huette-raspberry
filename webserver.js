@@ -36,7 +36,7 @@ var clients = {}; // List of clients
 var devices = {}; // List of devices
 
 // first socket to communicate with clients
-var io = require('socket.io')(http, { log: false, origins: '*:*', path: "/LosOchos.org/socket.io" }); //require socket.io module and pass the http object
+var io = require('socket.io')(http, { log: false, origins: '*', path: "/LosOchos.org/socket.io" }); //require socket.io module and pass the http object
 
 http.listen(8020, '0.0.0.0', function () { //listen to port 8020
     console.log("Waiting for clients on", "http://" + http.address().address + ":" + http.address().port);
@@ -106,11 +106,16 @@ io.sockets.on('connection', (socket) => { // Socket Connection to client
             },
             emit: (event, ...args) => {
                 setTimeout(() => {
-                    console.log("Device response:", event, data);
+                    console.log("Device response:", event, { device: { id: here_id, payload: args[0] } });
                     Object.keys(clients).forEach((element) => {
-                        clients[element].emit(event, { device: { id: here_id, payload: { name: data.name, type: data.type } } });
+                        if(event === "publish")
+                            clients[element].emit(event, { device: { id: here_id, payload: data } });
+                        else
+                            clients[element].emit(event, { device: { id: here_id, payload: args[0] } });
+
                     });
                 }, 100);
+
 
             },
             disconnect: () => {
@@ -209,3 +214,20 @@ io2.on('connection', (socket) => {
         delete devices[socket.id];
     });
 });
+
+// // ------------------------------- PROXY SOCKET ----------------------------------------
+
+var io_client = require('socket.io-client')('http://losochos.spdns.org:8030', { log: false, origins: '*', path: "/LosOchos.org/socket.io", query: { isSubject: true } });
+// Add our proxy to the clients list
+io.emit("connection", io_client);
+
+var oneventHandler = io_client.onevent;
+io_client.onevent = function () {
+    oneventHandler.apply(this, arguments);
+    var packet = arguments[0];
+    var eventType = packet.data[0];
+    var eventData = packet.data[1];
+    var eventCallback = packet.data[2];
+    console.log(eventType, eventData);
+    io.emit(eventType, eventData);
+};
